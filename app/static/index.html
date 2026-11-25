@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificats – Mercator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect x=%274%27 width=%278%27 height=%2716%27 fill=%27%23369125%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true"></span>
+    <h1 id="title">Certificats – Mercator</h1>
+  </div>
+  <div class="actions">
+    <span id="fetched" class="muted"></span>
+    <button id="refresh" class="btn">Actualiser</button>
+    <button id="export" class="btn">Export CSV</button>
+    <button id="report" class="btn btn-primary">Rapport PDF</button>
+  </div>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<main>
+  <nav class="seg" id="seg" aria-label="Catégorie"></nav>
+  <section class="kpis" id="kpis"></section>
+
+  <section class="filters">
+    <input id="q" type="search" placeholder="Rechercher (nom, description, serveur, application…)" autocomplete="off">
+    <select id="f-state" aria-label="Échéance">
+      <option value="">Toutes les échéances</option>
+      <option value="expired">Expirés</option>
+      <option value="critical">Critique</option>
+      <option value="warning">À surveiller</option>
+      <option value="valid">Valides</option>
+      <option value="revoked">Révoqués</option>
+      <option value="nodate">Sans date</option>
+    </select>
+    <select id="f-type" aria-label="Type"><option value="">Tous les types</option></select>
+    <button id="reset" class="btn">Réinitialiser</button>
+    <span id="count" class="muted"></span>
+  </section>
+
+  <div class="table-wrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th data-k="name">Nom</th>
+          <th data-k="category">Catégorie</th>
+          <th data-k="type">Type</th>
+          <th data-k="start_validity">Début</th>
+          <th data-k="end_validity">Fin</th>
+          <th data-k="days_left">Jours restants</th>
+          <th data-k="state">Échéance</th>
+          <th data-k="status">Statut</th>
+          <th>Serveurs</th>
+          <th>Applications</th>
+          <th>Mercator</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="empty" hidden>Aucun certificat ne correspond aux filtres.</p>
+  </div>
+</main>
+
+<aside id="drawer" class="drawer" hidden>
+  <button id="close" class="btn close" aria-label="Fermer">✕</button>
+  <div id="detail"></div>
+</aside>
+
+<dialog id="dlg" class="dlg">
+  <form method="dialog" id="rform">
+    <h2>Rapport de contrôle PDF</h2>
+    <p class="muted">Les données sont relues en direct dans Mercator au moment de la génération. Le rapport est
+      archivé avec l'empreinte SHA-256 des données, et sert de preuve que le contrôle a été effectué.</p>
+    <label>Contrôle réalisé par <input id="r-who" required minlength="2" maxlength="100" placeholder="Prénom Nom" autocomplete="name"></label>
+    <label>Périmètre
+      <select id="r-scope"><option value="">Certificats, licences et domaines</option>
+        <option value="certificate">Certificats uniquement</option><option value="license">Licences uniquement</option>
+        <option value="domain">Domaines uniquement</option></select></label>
+    <label>Commentaire (optionnel)<textarea id="r-comment" rows="3" maxlength="1000" placeholder="Ex. renouvellements lancés pour…"></textarea></label>
+    <p id="r-msg" class="r-msg" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" id="r-cancel" class="btn">Fermer</button>
+      <button type="submit" id="r-go" class="btn btn-primary">Générer le rapport</button>
+    </div>
+  </form>
+  <h3>Historique des contrôles</h3>
+  <div class="hist-wrap"><table class="hist"><thead><tr><th>Date</th><th>Contrôleur</th><th>Périmètre</th><th>Éléments</th><th>À traiter</th><th></th></tr></thead>
+  <tbody id="hist"></tbody></table><p id="hist-empty" class="muted" hidden>Aucun rapport généré pour l'instant.</p></div>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

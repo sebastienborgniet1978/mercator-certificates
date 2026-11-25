@@ -1,0 +1,13 @@
+services:
+  mercator-certs:
+    build: .
+    container_name: mercator-certs
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8090:8000"   # à retirer si l'app n'est exposée que via Nginx Proxy Manager
+    volumes:
+      - certs-data:/data   # archive des rapports de contrôle (PDF + données + journal) : à sauvegarder
+
+volumes:
+  certs-data:
