@@ -23,6 +23,18 @@ Bouton **Rapport PDF** : saisir le nom du contrôleur (+ commentaire, périmètr
 - Vérification d'intégrité : `sha256sum CTRL-....json` doit donner l'empreinte imprimée dans le PDF.
 - **Sauvegarder le volume `certs-data`** : c'est lui qui constitue la piste d'audit.
 
+## Notifications e-mail d'expiration
+Renseigner `SMTP_HOST` et `MAIL_TO` (cf. `.env.example`) pour activer l'envoi. Les seuils se définissent avec
+`NOTIFY_THRESHOLDS` (jours, défaut `60,30,15,7,0`) ; `NOTIFY_CATEGORIES` restreint à certificats / licences / domaines.
+- Un contrôle est fait toutes les `NOTIFY_CHECK_INTERVAL` secondes (défaut 1 h) ; **un seul mail récapitulatif** est envoyé
+  pour les éléments qui ont franchi un nouveau seuil, et une dernière alerte « expiré » ensuite. Pas de répétition tant
+  qu'aucun nouveau seuil n'est franchi.
+- Après renouvellement (nouvelle date de fin), le suivi de l'élément repart de zéro.
+- Les éléments révoqués ou sans date sont ignorés.
+- État conservé dans `/data/notifications.json` (volume `certs-data`) ; au premier démarrage, les éléments déjà sous un
+  seuil sont notifiés une fois.
+- `GET /api/notifications` : configuration et dernier contrôle ; `POST /api/notifications/test` : mail de test.
+
 ## Catégories (certificat / licence / domaine)
 Mercator stocke tout dans l'entité « certificats » ; l'app classe chaque élément d'après la colonne **type** :
 contient `domain` ou `dns` → **Domaine** ; contient `licen` → **Licence** ; sinon → **Certificat**.

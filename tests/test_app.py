@@ -158,3 +158,30 @@ def test_ui_not_cached_and_has_domain_tab(api):
     assert r.headers["cache-control"] == "no-cache"
     assert '["domain", "Domaines"]' in r.text
     assert api.get("/").headers["cache-control"] == "no-cache"
+
+
+def test_notification_levels_and_dedup():
+    sys.path.insert(0, str(ROOT))
+    from app.notifier import EXPIRED, due_items, level_of
+    th = [60, 30, 15, 7, 0]
+    assert level_of(100, th) is None and level_of(60, th) == 60 and level_of(29, th) == 30
+    assert level_of(0, th) == 0 and level_of(-3, th) == EXPIRED
+
+    def it(i, days, end="2027-01-01", state="valid", cat="certificate"):
+        return {"id": i, "name": f"c{i}", "days_left": days, "end_validity": end,
+                "state": state, "category": cat}
+
+    due, st = due_items([it(1, 50), it(2, 100), it(3, 5, state="revoked"), it(4, None, state="nodate")], {}, th)
+    assert [d["id"] for d in due] == [1] and st == {"1": {"end": "2027-01-01", "level": 60}}
+    # même palier : rien ; palier inférieur : nouvelle alerte ; expiré : dernière alerte
+    assert due_items([it(1, 40)], st, th)[0] == []
+    due, st = due_items([it(1, 25)], st, th)
+    assert due[0]["level"] == 30
+    due, st = due_items([it(1, -2)], st, th)
+    assert due[0]["level"] == EXPIRED
+    assert due_items([it(1, -9)], st, th)[0] == []
+    # renouvellement (nouvelle date) : le suivi repart
+    due, _ = due_items([it(1, 50, end="2028-01-01")], st, th)
+    assert [d["id"] for d in due] == [1]
+    # filtre de catégorie
+    assert due_items([it(1, 5, cat="domain")], {}, th, ["certificate"])[0] == []
