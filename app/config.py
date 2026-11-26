@@ -48,6 +48,8 @@ class Settings:
     smtp_user: str = os.getenv("SMTP_USER", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
     smtp_security: str = os.getenv("SMTP_SECURITY", "starttls").strip().lower()  # starttls | ssl | none
+    # false si le relais SMTP présente un certificat interne non reconnu (STARTTLS / SSL)
+    smtp_tls_verify: bool = _bool("SMTP_TLS_VERIFY", True)
     mail_from: str = os.getenv("MAIL_FROM", "")
     mail_to: list[str] = [a.strip() for a in os.getenv("MAIL_TO", "").split(",") if a.strip()]
     # Seuils (jours avant échéance) : un mail est envoyé quand un élément franchit un seuil.
