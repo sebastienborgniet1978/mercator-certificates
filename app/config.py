@@ -42,6 +42,24 @@ class Settings:
     reports_dir: str = os.getenv("REPORTS_DIR", "/data/reports")
     report_tz: str = os.getenv("REPORT_TZ", "Europe/Luxembourg")
 
+    # Notifications e-mail d'expiration (actives si SMTP_HOST et MAIL_TO sont renseignés)
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user: str = os.getenv("SMTP_USER", "")
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    smtp_security: str = os.getenv("SMTP_SECURITY", "starttls").strip().lower()  # starttls | ssl | none
+    mail_from: str = os.getenv("MAIL_FROM", "")
+    mail_to: list[str] = [a.strip() for a in os.getenv("MAIL_TO", "").split(",") if a.strip()]
+    # Seuils (jours avant échéance) : un mail est envoyé quand un élément franchit un seuil.
+    notify_thresholds: list[int] = sorted(
+        {int(x) for x in os.getenv("NOTIFY_THRESHOLDS", "60,30,15,7,0").split(",") if x.strip().lstrip("-").isdigit()},
+        reverse=True)
+    # Catégories surveillées (certificate, license, domain) ; vide = toutes
+    notify_categories: list[str] = [c.strip().lower() for c in
+                                    os.getenv("NOTIFY_CATEGORIES", "").split(",") if c.strip()]
+    notify_interval: int = int(os.getenv("NOTIFY_CHECK_INTERVAL", "3600"))  # secondes entre deux contrôles
+    notify_state_file: str = os.getenv("NOTIFY_STATE_FILE", "/data/notifications.json")
+
     app_title: str = os.getenv("APP_TITLE", "Certificats – Mercator")
 
 

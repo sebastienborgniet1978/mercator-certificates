@@ -1,9 +1,12 @@
 import asyncio
 import hashlib
 import json
+import logging
 import re
 import secrets
+import smtplib
 import time
+from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Literal
@@ -16,9 +19,11 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
+from . import notifier
 from .mercator import MercatorClient, MercatorError
 from .report import SCOPE_LABEL, build_pdf
 
+log = logging.getLogger("certs")
 STATIC = Path(__file__).parent / "static"
 STATUS_LABELS = {0: "Good", 1: "Revoked", 2: "Unknown"}  # RFC 6960, cf. docs Mercator
 
@@ -44,7 +49,28 @@ def require_auth(creds: HTTPBasicCredentials | None = Depends(_basic)):
     return creds.username
 
 
-app = FastAPI(title=settings.app_title, dependencies=[Depends(require_auth)],
+async def _notify_loop():
+    """Contrôle périodique des seuils d'expiration et envoi des mails."""
+    while True:
+        try:
+            await cache.get()
+            if cache.items:
+                await notifier.check_and_notify(
+                    cache.items, datetime.now(timezone.utc).isoformat())
+        except (MercatorError, OSError, smtplib.SMTPException) as e:
+            log.warning("Contrôle des notifications en échec : %s", e)
+        await asyncio.sleep(max(60, settings.notify_interval))
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    task = asyncio.create_task(_notify_loop()) if notifier.enabled() else None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title=settings.app_title, dependencies=[Depends(require_auth)], lifespan=lifespan,
               docs_url=None, redoc_url=None, openapi_url=None)
 
 
@@ -191,6 +217,26 @@ async def list_certificates(refresh: bool = False):
         "mercator_public_url": settings.mercator_public_url,
         "title": settings.app_title,
     }
+
+
+# ------------------------------------------------------- notifications mail
+@app.get("/api/notifications")
+async def notifications_status():
+    return {"enabled": notifier.enabled(), "thresholds": settings.notify_thresholds,
+            "recipients": settings.mail_to, "categories": settings.notify_categories,
+            "interval": settings.notify_interval, "last_run": notifier.last_run}
+
+
+@app.post("/api/notifications/test")
+async def notifications_test():
+    """Envoie un mail de test pour valider la configuration SMTP."""
+    if not notifier.enabled():
+        return JSONResponse({"detail": "Notifications non configurées (SMTP_HOST, MAIL_TO)."}, status_code=400)
+    try:
+        await notifier.send_test()
+    except (OSError, smtplib.SMTPException) as e:
+        return JSONResponse({"detail": f"Envoi impossible : {e.__class__.__name__}: {e}"}, status_code=502)
+    return {"ok": True}
 
 
 # ----------------------------------------------------- rapports de contrôle
