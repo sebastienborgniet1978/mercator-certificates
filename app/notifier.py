@@ -87,6 +87,9 @@ def build_message(due: list[dict]) -> EmailMessage:
 
 def _send(msg: EmailMessage) -> None:
     ctx = ssl.create_default_context()
+    if not settings.smtp_tls_verify:
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
     if settings.smtp_security == "ssl":
         smtp = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=30, context=ctx)
     else:
